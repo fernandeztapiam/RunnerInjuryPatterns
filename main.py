@@ -162,3 +162,50 @@ plt.show()
 cluster_summary = data.groupby('Cluster')[features].mean().round(2)
 print("\n🔹 Promedio de cada variable por clúster:")
 print(cluster_summary)
+
+from sklearn.cluster import DBSCAN
+
+# 16. Aplicación de DBSCAN
+dbscan = DBSCAN(eps=0.8, min_samples=5)  # values we can change
+db_labels = dbscan.fit_predict(X)
+
+data['DBSCAN_Cluster'] = db_labels
+
+# Visualización en PCA
+pca_df['DBSCAN'] = db_labels
+
+plt.figure(figsize=(6, 5))
+sns.scatterplot(data=pca_df, x='PC1', y='PC2', hue='DBSCAN', palette='tab10', s=60)
+plt.title("DBSCAN - Visualización PCA")
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+# Análisis descriptivo por grupo (excluye ruido si lo hay)
+dbscan_summary = data[data['DBSCAN_Cluster'] != -1].groupby('DBSCAN_Cluster')[features].mean().round(2)
+
+print("\n🔹 Promedio de cada variable por clúster (DBSCAN):")
+print(dbscan_summary)
+
+from sklearn.mixture import GaussianMixture
+
+# 17. Aplicación de Gaussian Mixture Models (GMM)
+gmm = GaussianMixture(n_components=4, covariance_type='full', random_state=42)
+gmm_labels = gmm.fit_predict(X)
+
+data['GMM_Cluster'] = gmm_labels
+pca_df['GMM'] = gmm_labels
+
+# Visualización en PCA
+plt.figure(figsize=(6, 5))
+sns.scatterplot(data=pca_df, x='PC1', y='PC2', hue='GMM', palette='tab10', s=60)
+plt.title("GMM - Visualización PCA")
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+# Análisis descriptivo por grupo
+gmm_summary = data.groupby('GMM_Cluster')[features].mean().round(2)
+print("\n🔹 Promedio de cada variable por clúster (GMM):")
+print(gmm_summary)
+
