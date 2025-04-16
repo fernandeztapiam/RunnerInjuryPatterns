@@ -4,208 +4,137 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.preprocessing import StandardScaler
 import scipy.stats as stats
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+from sklearn.decomposition import PCA
+from sklearn.cluster import DBSCAN
+from sklearn.mixture import GaussianMixture
 
-# 1. Generación de datos simulados
-np.random.seed(42)
+# 1. Data Generation
+# This section generates simulated data for three variables related to human movement:
+# 'Stride Length (m)', 'Cadence (spm)' (steps per minute), and 'Plantar Pressure (kPa)'.
+# NumPy's random.normal function is used to create arrays of 150 data points for each variable,
+# drawing from a normal distribution with specified means (loc) and standard deviations (scale).
+np.random.seed(42)  # for reproducibility of the random data
 n_samples = 150
 
 stride_length = np.random.normal(loc=1.2, scale=0.15, size=n_samples)
 cadence = np.random.normal(loc=155, scale=10, size=n_samples)
 plantar_pressure = np.random.normal(loc=350, scale=40, size=n_samples)
 
-# Crear DataFrame
+# Create a Pandas DataFrame to store the generated data in a structured way.
 data = pd.DataFrame({
     'Stride Length (m)': stride_length,
     'Cadence (spm)': cadence,
     'Plantar Pressure (kPa)': plantar_pressure
 })
 
-# 2. Calcular velocidad (Stride Length × Cadence)
+# 2. Speed Calculation
+# A new column 'Speed (m/min)' is calculated by multiplying the 'Stride Length (m)' by the 'Cadence (spm)'.
+# This assumes that speed is a direct product of stride length and the number of steps taken per minute.
 data['Speed (m/min)'] = data['Stride Length (m)'] * data['Cadence (spm)']
 
-# 3. Histogramas de distribución
-sns.set(style="whitegrid")
+# 3. Distribution Histograms
+# This section uses Seaborn and Matplotlib to visualize the distribution of each of the simulated variables.
+# Histograms are created with 20 bins to show the frequency of values within different ranges for each variable.
+sns.set(style="whitegrid")  # Sets a clean style for the plots
 data.hist(bins=20, figsize=(12, 6), color='skyblue', edgecolor='black')
-plt.suptitle("Distribución de Variables Simuladas", fontsize=16)
-plt.tight_layout(rect=[0, 0, 1, 0.95])
+plt.suptitle("Distribution of Simulated Variables", fontsize=16)
+plt.tight_layout(rect=[0, 0, 1, 0.95])  # Adjust layout to prevent title overlap
 plt.show()
 
-# 4. Boxplot sin normalizar
+# 4. Unnormalized Boxplots
+# Boxplots are generated to show the central tendency, spread, and potential outliers of the original, unscaled data for each variable.
 plt.figure(figsize=(10, 4))
-sns.boxplot(data=data, palette="pastel")
-plt.title("Boxplots de Variables Simuladas")
+sns.boxplot(data=data, palette="pastel")  # 'pastel' provides a color palette for the boxes
+plt.title("Boxplots of Simulated Variables")
 plt.show()
 
-# 5. Pairplot (correlaciones visuales)
+# 5. Pairplot (Visual Correlations)
+# A pairplot creates a matrix of scatter plots for all pairs of variables in the DataFrame,
+# along with histograms on the diagonal. This helps to visually identify potential correlations between variables.
 sns.pairplot(data)
-plt.suptitle("Relaciones entre Variables Simuladas", y=1.02)
+plt.suptitle("Relationships between Simulated Variables", y=1.02)  # Adjust title position
 plt.show()
 
-# 6. Boxplots normalizados (solo para visualización)
+# 6. Normalized Boxplots (for Visualization)
+# To compare the spread and potential outliers of variables on a similar scale, the data is normalized using StandardScaler.
+# StandardScaler scales the data so that it has a mean of 0 and a standard deviation of 1.
 data_norm = pd.DataFrame(StandardScaler().fit_transform(data), columns=data.columns)
 plt.figure(figsize=(10, 4))
 sns.boxplot(data=data_norm, palette="pastel")
-plt.title("Boxplots Normalizados de Variables Simuladas")
+plt.title("Normalized Boxplots of Simulated Variables")
 plt.show()
 
-# 7. Matriz de correlación
+# 7. Correlation Matrix
+# The Pearson correlation coefficient is calculated for all pairs of variables in the original DataFrame.
+# The correlation matrix shows the linear relationship between each pair of variables, ranging from -1 to 1.
 correlation_matrix = data.corr()
-print("\n🔹 Matriz de correlación de Pearson:")
+print("\n🔹 Pearson correlation matrix:")
 print(correlation_matrix.round(2))
 
+# A heatmap is used to visualize the correlation matrix, where the color intensity and annotation indicate the strength and direction of the correlations.
 plt.figure(figsize=(6, 4))
-sns.heatmap(correlation_matrix, annot=True, cmap="coolwarm", fmt=".2f")
-plt.title("Matriz de Correlación entre Variables")
+sns.heatmap(correlation_matrix, annot=True, cmap="coolwarm", fmt=".2f")  # 'annot=True' displays the correlation values, 'cmap' sets the color scheme
+plt.title("Correlation Matrix between Variables")
 plt.tight_layout()
 plt.show()
 
-# 8. Regresión lineal: Cadence ~ Stride Length
+# 8. Linear Regression: Cadence vs. Stride Length
+# This section performs a linear regression analysis to model the relationship between 'Stride Length (m)' (independent variable) and 'Cadence (spm)' (dependent variable).
+# scipy.stats.linregress calculates the slope, intercept, R-value, p-value, and standard error of the regression line.
 x = data['Stride Length (m)']
 y = data['Cadence (spm)']
 
 slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
 
-print(f"\n🔹 Regresión lineal: Cadence ~ Stride Length")
+print(f"\n🔹 Linear regression: Cadence ~ Stride Length")
 print(f"Slope: {slope:.2f}")
 print(f"Intercept: {intercept:.2f}")
-print(f"R²: {r_value**2:.2f}  (correlación = {r_value:.2f})")
-print(f"p-value: {p_value:.4f}")
+print(f"R²: {r_value**2:.2f}  (correlation = {r_value:.2f})")  # R-squared indicates the proportion of variance explained by the model
+print(f"p-value: {p_value:.4f}")  # p-value indicates the significance of the relationship
 
+# A scatter plot shows the original data points, and the fitted linear regression line is overlaid in red.
 plt.figure(figsize=(6, 4))
 sns.scatterplot(x=x, y=y)
-plt.plot(x, intercept + slope * x, color='red', label=f'Regresión lineal\n$R^2$ = {r_value**2:.2f}')
+plt.plot(x, intercept + slope * x, color='red', label=f'Linear regression\n$R^2$ = {r_value**2:.2f}')
 plt.xlabel("Stride Length (m)")
 plt.ylabel("Cadence (spm)")
-plt.title("Relación entre Zancada y Cadencia")
+plt.title("Relationship between Stride Length and Cadence")
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
 plt.show()
 
-# 9. Correlación y regresión: Speed vs Plantar Pressure
+# 9. Correlation and Regression: Speed vs. Plantar Pressure
+# This section examines the relationship between 'Speed (m/min)' and 'Plantar Pressure (kPa)'.
+# First, the Pearson correlation coefficient between these two variables is calculated.
 cor = data[['Speed (m/min)', 'Plantar Pressure (kPa)']].corr().iloc[0, 1]
-print(f"\n🔹 Correlación entre velocidad y presión plantar: r = {cor:.2f}")
+print(f"\n🔹 Correlation between speed and plantar pressure: r = {cor:.2f}")
 
+# A regression plot (using seaborn's regplot) visualizes the relationship, including a scatter plot of the data points and a linear regression line with a confidence interval.
 plt.figure(figsize=(6, 4))
 sns.regplot(x='Speed (m/min)', y='Plantar Pressure (kPa)', data=data,
             scatter_kws={"alpha":0.6}, line_kws={"color": "red"})
-plt.title("Relación entre Velocidad y Presión Plantar")
+plt.title("Relationship between Speed and Plantar Pressure")
 plt.xlabel("Speed (m/min)")
 plt.ylabel("Plantar Pressure (kPa)")
 plt.grid(True)
 plt.tight_layout()
 plt.show()
-from sklearn.cluster import KMeans
-from sklearn.metrics import silhouette_score
-from sklearn.decomposition import PCA
 
-# 10. Estandarización de los datos
+# 10. Data Standardization
+# For clustering algorithms that are sensitive to the scale of the input features, the data is standardized using StandardScaler.
+# Only the numerical features are selected for standardization.
 features = ['Stride Length (m)', 'Cadence (spm)', 'Plantar Pressure (kPa)', 'Speed (m/min)']
 X = StandardScaler().fit_transform(data[features])
 
-# 11. Método del codo para elegir k
+# 11. Elbow Method for Choosing k (for K-Means)
+# The elbow method is used to heuristically determine the optimal number of clusters (k) for K-Means.
+# It involves running K-Means for a range of k values and plotting the within-cluster sum of squares (inertia).
+# The "elbow" point in the plot (where the rate of decrease in inertia starts to slow down) is often considered a good estimate for k.
 inertias = []
 k_range = range(2, 10)
 
 for k in k_range:
-    kmeans = KMeans(n_clusters=k, random_state=42)
-    kmeans.fit(X)
-    inertias.append(kmeans.inertia_)
-
-plt.figure(figsize=(6, 4))
-plt.plot(k_range, inertias, marker='o')
-plt.title("Método del Codo para determinar k")
-plt.xlabel("Número de clústeres (k)")
-plt.ylabel("Inercia")
-plt.grid(True)
-plt.tight_layout()
-plt.show()
-
-# 12. Silhouette Score
-silhouette_scores = []
-for k in k_range:
-    kmeans = KMeans(n_clusters=k, random_state=42)
-    labels = kmeans.fit_predict(X)
-    score = silhouette_score(X, labels)
-    silhouette_scores.append(score)
-
-plt.figure(figsize=(6, 4))
-plt.plot(k_range, silhouette_scores, marker='o', color='orange')
-plt.title("Silhouette Score para diferentes k")
-plt.xlabel("Número de clústeres (k)")
-plt.ylabel("Silhouette Score")
-plt.grid(True)
-plt.tight_layout()
-plt.show()
-
-# 13. Aplicación de K-Means con el k elegido (por ejemplo, k=4)
-k = 4  # puedes cambiarlo cuando veas los gráficos
-kmeans = KMeans(n_clusters=k, random_state=42)
-labels = kmeans.fit_predict(X)
-
-data['Cluster'] = labels
-
-# 14. Visualización con PCA
-pca = PCA(n_components=2)
-X_pca = pca.fit_transform(X)
-pca_df = pd.DataFrame(X_pca, columns=["PC1", "PC2"])
-pca_df['Cluster'] = labels
-
-plt.figure(figsize=(6, 5))
-sns.scatterplot(data=pca_df, x='PC1', y='PC2', hue='Cluster', palette='Set2', s=60)
-plt.title("Visualización de Clústeres (PCA 2D)")
-plt.grid(True)
-plt.tight_layout()
-plt.show()
-
-# 15. Análisis por grupo
-cluster_summary = data.groupby('Cluster')[features].mean().round(2)
-print("\n🔹 Promedio de cada variable por clúster:")
-print(cluster_summary)
-
-from sklearn.cluster import DBSCAN
-
-# 16. Aplicación de DBSCAN
-dbscan = DBSCAN(eps=0.8, min_samples=5)  # values we can change
-db_labels = dbscan.fit_predict(X)
-
-data['DBSCAN_Cluster'] = db_labels
-
-# Visualización en PCA
-pca_df['DBSCAN'] = db_labels
-
-plt.figure(figsize=(6, 5))
-sns.scatterplot(data=pca_df, x='PC1', y='PC2', hue='DBSCAN', palette='tab10', s=60)
-plt.title("DBSCAN - Visualización PCA")
-plt.grid(True)
-plt.tight_layout()
-plt.show()
-
-# Análisis descriptivo por grupo (excluye ruido si lo hay)
-dbscan_summary = data[data['DBSCAN_Cluster'] != -1].groupby('DBSCAN_Cluster')[features].mean().round(2)
-
-print("\n🔹 Promedio de cada variable por clúster (DBSCAN):")
-print(dbscan_summary)
-
-from sklearn.mixture import GaussianMixture
-
-# 17. Aplicación de Gaussian Mixture Models (GMM)
-gmm = GaussianMixture(n_components=4, covariance_type='full', random_state=42)
-gmm_labels = gmm.fit_predict(X)
-
-data['GMM_Cluster'] = gmm_labels
-pca_df['GMM'] = gmm_labels
-
-# Visualización en PCA
-plt.figure(figsize=(6, 5))
-sns.scatterplot(data=pca_df, x='PC1', y='PC2', hue='GMM', palette='tab10', s=60)
-plt.title("GMM - Visualización PCA")
-plt.grid(True)
-plt.tight_layout()
-plt.show()
-
-# Análisis descriptivo por grupo
-gmm_summary = data.groupby('GMM_Cluster')[features].mean().round(2)
-print("\n🔹 Promedio de cada variable por clúster (GMM):")
-print(gmm_summary)
-
+    kmeans = KMeans(n_clusters=k, random_state=42, n_init=10
