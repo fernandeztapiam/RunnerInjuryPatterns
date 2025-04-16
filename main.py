@@ -137,4 +137,118 @@ inertias = []
 k_range = range(2, 10)
 
 for k in k_range:
-    kmeans = KMeans(n_clusters=k, random_state=42, n_init=10
+    kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)  # n_init to handle convergence warnings
+    kmeans.fit(X)
+    inertias.append(kmeans.inertia_)
+
+plt.figure(figsize=(6, 4))
+plt.plot(k_range, inertias, marker='o')
+plt.title("Elbow Method to determine k")
+plt.xlabel("Number of clusters (k)")
+plt.ylabel("Inertia")
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+# 12. Silhouette Score
+# The silhouette score is another metric used to evaluate the quality of clustering.
+# It measures how well each data point fits into its assigned cluster compared to other clusters.
+# Scores range from -1 to 1, where a high score indicates that the object is well matched to its own cluster and poorly matched to neighboring clusters.
+silhouette_scores = []
+for k in k_range:
+    kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
+    labels = kmeans.fit_predict(X)
+    score = silhouette_score(X, labels)
+    silhouette_scores.append(score)
+
+plt.figure(figsize=(6, 4))
+plt.plot(k_range, silhouette_scores, marker='o', color='orange')
+plt.title("Silhouette Score for different k")
+plt.xlabel("Number of clusters (k)")
+plt.ylabel("Silhouette Score")
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+# 13. Applying K-Means with the Chosen k (e.g., k=4)
+# Based on the elbow method and/or silhouette score, a value for k (the number of clusters) is chosen.
+# Here, k is set to 4 as an example, but this should be determined from the previous plots.
+k = 4  # You can change this based on the elbow and silhouette plots
+kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
+labels = kmeans.fit_predict(X)
+
+# The cluster labels assigned by K-Means are added as a new column to the original DataFrame.
+data['Cluster'] = labels
+
+# 14. Visualization with PCA
+# To visualize the clusters in a 2D space, Principal Component Analysis (PCA) is used to reduce the dimensionality of the standardized data.
+# PCA finds the principal components (directions of maximum variance) in the data.
+pca = PCA(n_components=2)
+X_pca = pca.fit_transform(X)
+pca_df = pd.DataFrame(X_pca, columns=["PC1", "PC2"])  # Create a DataFrame for the PCA results
+pca_df['Cluster'] = labels  # Add the cluster labels to the PCA DataFrame
+
+# A scatter plot shows the data points in the 2D PCA space, with each cluster colored differently.
+plt.figure(figsize=(6, 5))
+sns.scatterplot(data=pca_df, x='PC1', y='PC2', hue='Cluster', palette='Set2', s=60)
+plt.title("Visualization of Clusters (PCA 2D)")
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+# 15. Analysis by Group
+# The mean of each of the original features is calculated for each of the identified clusters.
+# This provides a profile of the characteristics of each cluster.
+cluster_summary = data.groupby('Cluster')[features].mean().round(2)
+print("\n🔹 Average of each variable per cluster:")
+print(cluster_summary.to_string())
+
+
+# 16. Applying DBSCAN (Density-Based Spatial Clustering of Applications with Noise)
+# DBSCAN is a density-based clustering algorithm that groups together points that are closely packed together, marking as outliers points that lie alone in low-density regions.
+# 'eps' defines the maximum distance between two samples for one to be considered as in the neighborhood of the other.
+# 'min_samples' defines the number of samples in a neighborhood for a point to be considered as a core point.
+dbscan = DBSCAN(eps=1, min_samples=8)  # These values can be adjusted
+db_labels = dbscan.fit_predict(X)
+
+# The cluster labels assigned by DBSCAN are added to the original DataFrame. Outliers are labeled as -1.
+data['DBSCAN_Cluster'] = db_labels
+
+# Visualization of DBSCAN results using the PCA reduced data.
+pca_df['DBSCAN'] = db_labels
+
+plt.figure(figsize=(6, 5))
+sns.scatterplot(data=pca_df, x='PC1', y='PC2', hue='DBSCAN', palette='tab10', s=60)
+plt.title("DBSCAN - PCA Visualization")
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+# Descriptive analysis by DBSCAN group (excluding noise points labeled as -1).
+dbscan_summary = data[data['DBSCAN_Cluster'] != -1].groupby('DBSCAN_Cluster')[features].mean().round(2)
+
+print("\n🔹 Average of each variable per cluster (DBSCAN):")
+print(dbscan_summary)
+
+# 17. Applying Gaussian Mixture Models (GMM)
+# Gaussian Mixture Models are probabilistic models that assume all the data points are generated from a mixture of a finite number of Gaussian distributions with unknown parameters.
+# The algorithm tries to find the parameters of these Gaussian distributions that best explain the data.
+gmm = GaussianMixture(n_components=4, covariance_type='full', random_state=42)
+gmm_labels = gmm.fit_predict(X)
+
+# The cluster assignments from GMM are added to the DataFrame.
+data['GMM_Cluster'] = gmm_labels
+pca_df['GMM'] = gmm_labels
+
+# Visualization of GMM results using the PCA reduced data.
+plt.figure(figsize=(6, 5))
+sns.scatterplot(data=pca_df, x='PC1', y='PC2', hue='GMM', palette='tab10', s=60)
+plt.title("GMM - PCA Visualization")
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+# Descriptive analysis by GMM group.
+gmm_summary = data.groupby('GMM_Cluster')[features].mean().round(2)
+print("\n🔹 Average of each variable per cluster (GMM):")
+print(gmm_summary)
